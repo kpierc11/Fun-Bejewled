@@ -5,7 +5,7 @@ int main()
 {
 	Game game;
 
-	bool gameInit = game.InitSandGrid();
+	bool gameInit = game.InitGame();
 
 	if (gameInit)
 	{

@@ -5,6 +5,7 @@
 #include <chrono>
 #include <random>
 #include "imgui.h"
+#include "TextureManager.hpp"
 
 struct Color
 {
@@ -19,7 +20,7 @@ struct Particle
 	SDL_FRect rect{};
 	Color color;
 	bool isShowing{false};
-	SDL_Texture *texture
+	SDL_Texture *texture;
 	void ShiftParticleDown(int index);
 	void ShiftParticleLeftOrRight(int index);
 };
@@ -86,12 +87,14 @@ private:
 	SDL_Window *mWindow;
 	SDL_Renderer *mRenderer;
 	SDL_FRect mMouseArea;
-	SDL_Texture *mTexture
+	SDL_Texture *mTexture;
 	
 	std::vector<Particle> mGrid;
 	std::vector<Particle> mParticles;
 	std::mt19937 mRng;
 	std::uniform_int_distribution<> mDistrib;
+
+	TextureManager textureManager;
 
 	ImGuiIO mIO;
 };

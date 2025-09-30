@@ -1,7 +1,6 @@
 #include "Game.hpp"
 #include "backends/imgui_impl_sdl3.h"
 #include "backends/imgui_impl_sdlrenderer3.h"
-#include <SDL3/SDL_image.h>
 #include "cmath"
 
 bool show_demo_window = true;
@@ -15,8 +14,8 @@ Game::Game() : mCurrentFrameTime(SDL_GetTicks()),
 			   mPreviousFrameTime(0),
 			   mScreenWidth(1280),
 			   mScreenHeight(1000),
-			   mRows(static_cast<int>(mScreenHeight / mSandSize)),
-			   mColumns(static_cast<int>(mScreenWidth / mSandSize)),
+			   mRows(0),
+			   mColumns(0),
 			   mMouseAreaSize(20),
 			   mAmountShowingOnGrid(0),
 			   mRandomNum(0),
@@ -75,23 +74,28 @@ bool Game::InitGame()
 		return 0;
 	}
 
-	// Check if sdl3 image was succefully created
-	int imgFlags = IMG_INIT_PNG | IMG_INIT_JPG;
-	if (!(IMG_Init(imgFlags) & imgFlags))
+	SDL_Surface *surface = NULL;
+	char *bmp_path = NULL;
+
+	SDL_asprintf(&bmp_path, "%sassets/red-jewl.bmp", SDL_GetBasePath());
+
+	surface = SDL_LoadBMP(bmp_path);
+	if (!surface)
 	{
-		SDL_Log("SDL_image could not initialize! SDL_image Error: %s", IMG_GetError());
-		return 1;
+		SDL_Log("Couldn't load bitmap: %s", SDL_GetError());
+		return SDL_APP_FAILURE;
 	}
 
-	SDL_Surface *imageSurface = IMG_Load("/assets/blue-jewl.jpg");
-	if (!imageSurface)
+	SDL_free(bmp_path);
+
+	mTexture = SDL_CreateTextureFromSurface(mRenderer, surface);
+	if (!mTexture)
 	{
-		SDL_Log("Failed to load image: %s", IMG_GetError());
-		return 1;
+		SDL_Log("Couldn't create static texture: %s", SDL_GetError());
+		return SDL_APP_FAILURE;
 	}
 
-	mTexture = SDL_CreateTextureFromSurface(renderer, imageSurface);
-	SDL_FreeSurface(imageSurface);
+	SDL_DestroySurface(surface);
 
 	// Add game objects to grid
 	static const Color sandColors[] = {
@@ -164,8 +168,6 @@ void Game::SimulationLoop()
 
 		HandleInput();
 		UpdateParticles();
-
-		static int counter = 0;
 
 		ImGui::Begin("Sand Simulator Settings"); // Create a window called "Hello, world!" and append into it.
 
@@ -253,28 +255,12 @@ void Game::HandleInput()
 		const int gridX = static_cast<int>(mouseX / GetSandSize());
 		const int gridY = static_cast<int>(mouseY / GetSandSize());
 
-		mMouseArea.h = static_cast<float>(mMouseAreaSize);
-		mMouseArea.w = static_cast<float>(mMouseAreaSize);
-		mMouseArea.x = mouseX - (mMouseArea.h / 2);
-		mMouseArea.y = mouseY - (mMouseArea.w / 2);
-
-		// int mouseAreaGridX = static_cast<int>(mMouseArea.x / GetSandSize());
-		// int mouseAreaGridY = static_cast<int>(mMouseArea.y / GetSandSize());
-
-		// SDL_SetRenderDrawColor(mRenderer, 255, 255, 255, 255);
-		// SDL_RenderRect(mRenderer, &mMouseArea);
-
 		if (gridX >= 0 && gridX < mColumns &&
 			gridY >= 0 && gridY < mRows)
 		{
 			int index = gridY * mColumns + gridX;
-			Particle &sandParticle = mGrid[index];
-
-			if (!sandParticle.isShowing)
-			{
-				sandParticle.isShowing = true;
-			}
-			// mActiveParticles.push_back(sandParticle);
+			std::swap(mGrid[index], mGrid[index + 1]);
+			
 		}
 	}
 }
@@ -316,9 +302,8 @@ void Game::Render()
 		if (!particle.isShowing)
 			continue;
 
-			//SDL_RenderCopy(renderer, particle.texture, nullptr, nullptr);
-			SDL_RenderTexture(mRenderer,particle.texture,particle.rect,NULL);
-
+		// SDL_RenderCopy(renderer, particle.texture, nullptr, nullptr);
+		SDL_RenderTexture(mRenderer, particle.texture, NULL, &particle.rect);
 	}
 
 	// IM Gui Render
@@ -375,7 +360,6 @@ void Game::EndSimulation()
 	ImGui::DestroyContext();
 	SDL_DestroyWindow(mWindow);
 	SDL_DestroyTexture(mTexture);
-	IMG_Quit();
 	SDL_Quit();
 }
 
